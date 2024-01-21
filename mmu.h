@@ -17,7 +17,7 @@ typedef enum {
 //struttura di un Frame
 typedef struct Frame {
     uint32_t frame_number;
-    char info; // TODO // se frame size == 1 Byte 
+    char info;                // TODO // se frame size == 1 Byte 
 } Frame;
 
 //wrapper della struttura di frames della mem fisica

@@ -5,7 +5,7 @@
 #define BIT_LOGIC_ADDR 24
 
 // frame e page size: 1B = 2^3 ?? 
-#define BIT_FRAME 8/* TODO*/
+#define BIT_FRAME 8                         /* TODO*/
 
 //valid, unswappable, read_bit, write_bit
 #define BIT_PAGE_FLAGS 4
