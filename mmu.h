@@ -3,22 +3,29 @@
 #include "globals.h"
 #include "list.h"
 
-
-typedef uint32_t PhysicalAddress;
-typedef uint32_t LogicAddress;
+typedef struct PhysicalAddress{
+    uint32_t addr:  20;
+} PhysicalAddress;
+typedef struct LogicAddress{
+    uint32_t addr: 24;
+} LogicAddress;
 
 //flags supportati: valid, unswappable, read, write
-typedef enum {
+typedef enum PageFlags{
     Valid = 0x1,
     Unswappable = 0x2,
     Read_bit = 0x4,
     Write_bit = 0x8
 } PageFlags;
+typedef enum FrameFlags{
+    Swapped = 0x1
+} FrameFlags;
 
 //struttura di un Frame
 typedef struct Frame {
+    char info[SIZE_PAGE];
     uint32_t frame_number;
-    char info;                // TODO // se frame size == 1 Byte 
+    uint32_t flags: 1; //bit SWAPPED per la page table
 } Frame;
 
 //spazio di swap come lista di frame di dimensione massima: NUM_PAGES
@@ -36,8 +43,8 @@ typedef struct FrameMemoryWrapper {
 
 //elemento della tabella delle pagine
 typedef struct PageEntry {
-    uint32_t frame_number:  BIT_FRAME
-    uint32_t flags:         BIT_PAGE_FLAGS
+    uint32_t frame_number:  BIT_FRAME;
+    uint32_t flags:   BIT_PAGE_FLAGS
 } PageEntry;
 
 //tabella delle pagine
@@ -59,7 +66,18 @@ typedef struct MMU {
     Swap_File * swap_file;
 } MMU;
 
+//scrive un Byte (char c) data la pos
 void MMU_writeByte(MMU * mmu, int pos, char c);
+//legge un Byte (char) data la pos
 char * MMU_readByte(MMU * mmu, int pos);
+//PAGE FAULT HANDLER 
+//(pos è il numero di pagina alla quale si è tentato di accedere)
+void MMU_exception(MMU * mmu, int pos);
 
-getPhysicalAddr(MMU * mmu, LogicAddress logicAddr);
+//traduzione indirizzo logico -> fisico
+PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr);
+
+//init delle strutture di gestione memoria MMU
+MMU initMemSystem();
+//libero le risorse allocate con la init
+void freeMemSystem(MMU * mmu);

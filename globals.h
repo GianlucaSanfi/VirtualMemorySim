@@ -4,7 +4,7 @@
 #define BIT_PHYSICAL_ADDR 20
 #define BIT_LOGIC_ADDR 24
 
-// frame e page size: 1B = 2^3 ?? 
+// frame e page size: 256B = 2^8 ?? 
 #define BIT_FRAME 8                         /* TODO*/
 
 //valid, unswappable, read_bit, write_bit
@@ -13,7 +13,7 @@
 #define SIZE_VIRTUAL_MEMORY (1 << BIT_LOGIC_ADDR)
 #define SIZE_PHYSICAL_MEMORY (1 << BIT_PHYSICAL_ADDR)
 
-#define SIZE_PAGE (1 << (BIT_LOGIC_ADDR - BIT_FRAME))
+#define SIZE_PAGE (1 << (BIT_FRAME))
 #define NUM_PAGES (SIZE_VIRTUAL_MEMORY / (1 << BIT_FRAME))
 
 //dimensione della tabella delle pagine
