@@ -16,7 +16,7 @@ MMU initMemSystem(){
     mmu.swap_file = fopen("swap_file.bin", "w");
 
 //SWAP
-    char c = "";
+    char c = 0;
     fseek(mmu.swap_file, 0, SEEK_SET); //azzero l'indice di scorrimento del file
     for (int i = 0; i < SIZE_VIRTUAL_MEMORY; i++){ //creo il file di 16 MB
         fwrite(&c, sizeof(char), 1, mmu.swap_file);
@@ -27,6 +27,7 @@ MMU initMemSystem(){
     mmu.frame_memory_wrapper->num_frames = NUM_FRAMES; 
     //inizialmente ci sono NUM_FRAMES frame liberi in ram
     init(mmu.frame_memory_wrapper->freeFrames); //struttura di gestione dei frame liberi
+    //printf("debug: ho creato la memoria ram 0");
     for(int i = 0; i < NUM_FRAMES; i++){
         //mmu.frame_memory_wrapper->frames[i].offset            NON IMPLEMETATO
         memset(mmu.frame_memory_wrapper->frames[i].info, 0, SIZE_PAGE);
@@ -36,6 +37,7 @@ MMU initMemSystem(){
         add(mmu.frame_memory_wrapper->freeFrames, &(mmu.frame_memory_wrapper->frames[i]));
         //aggiungo il frame appena creato alla lista dei frame liberi
     }
+    //printf("debug: ho creato la memoria ram");
     //devo allocare la tabella delle pagine all'inizio della memoria 
     for (int i = 0; i < (SIZE_PAGE_TABLE / SIZE_PAGE); i++){
         Frame * riservato = removeFrame(mmu.frame_memory_wrapper->freeFrames, 0);
@@ -55,7 +57,7 @@ MMU initMemSystem(){
 void freeMemSystem(MMU * mmu){
     fclose(mmu->swap_file);
     
-    free(mmu->frame_memory_wrapper->frames);
+    free(mmu->frame_memory_wrapper->freeFrames);
     free(mmu->frame_memory_wrapper);
 
     free(mmu->page_table);
@@ -88,7 +90,7 @@ PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr){
 void MMU_exception(MMU * mmu, int pos) {
     //pos è la page_number alla quale si è tentato di accedere 
     //ma risiedeva in swap anzichè in mem fisica => PAGE FAULT da gestire
-    //fare swap out di un frame in mem fisica se completa
+    //fare swap out di un frame in mem fisica se completa (no Reserved)
     // e swap in del frame richiesto (pagina) dallo spazio swap
 
     Frame * in;
