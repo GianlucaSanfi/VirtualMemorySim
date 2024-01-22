@@ -24,21 +24,22 @@ typedef enum FrameFlags{
 //struttura di un Frame
 typedef struct Frame {
     char info[SIZE_PAGE];
+    uint32_t offset_info;
     uint32_t frame_number;
     uint32_t flags: 1; //bit SWAPPED per la page table
 } Frame;
 
 //spazio di swap come lista di frame di dimensione massima: NUM_PAGES
-typedef struct Swap_File {
+/*typedef struct swap_space {
     Frame * swap_frames[NUM_PAGES];
     uint32_t size;
-} Swap_File;
+} swap_space;*/
 
 //wrapper della struttura di frames della mem fisica
 typedef struct FrameMemoryWrapper {
     Frame frames[NUM_FRAMES];
     uint32_t num_frames;
-    List * freeFrames;
+    struct List * freeFrames;
 } FrameMemoryWrapper;
 
 //elemento della tabella delle pagine
@@ -63,7 +64,7 @@ Se il bit di invalidità della pagina è 1
 typedef struct MMU {
     Page_Table * page_table;
     FrameMemoryWrapper * frame_memory_wrapper;
-    Swap_File * swap_file;
+    FILE * swap_file;
 } MMU;
 
 //scrive un Byte (char c) data la pos

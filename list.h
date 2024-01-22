@@ -2,16 +2,16 @@
 #include "globals.h"
 #include "stdio.h"
 #include "mmu.h"
-
+struct Frame;
 typedef struct List {
-    Frame * frames[NUM_FRAMES];
+    struct Frame * frames[NUM_FRAMES];
     int size;
 } List;
 
 void init(List * list);
 int isEmpty(List * list);
 
-Frame * get(List * list, int pos);
-int add(List * list, Frame * frame);
-Frame * removeFrame(List * list, int pos);
+struct Frame * get(List * list, int pos);
+int add(List * list, struct Frame * frame);
+struct Frame * removeFrame(List * list, int pos);
 

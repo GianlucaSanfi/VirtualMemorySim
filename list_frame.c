@@ -13,17 +13,18 @@ void init(List * list) {
 int isEmpty(List * list) {
     if(list->size == 0)
         return 1;
+    return 0;
 }
 
 //ritorna il Frame in pos oppure 0 se errore
-Frame * get(List * list, int pos) {
+struct Frame * get(List * list, int pos) {
     //check bounds
     if((pos < 0) || (pos >= list->size)) return 0;
     return list->frames[pos];
 }
 
 //ritorna 0 se success, 1 se errore
-int add(List * list, Frame * frame) {
+int add(List * list, struct Frame * frame) {
     //check bounds
     if( list->size == NUM_FRAMES){
         printf("limit of Frames reached %d \n", NUM_FRAMES);
@@ -35,7 +36,7 @@ int add(List * list, Frame * frame) {
 }
 
 //ritorna il Frame eliminato oppure 0 se errore
-Frame * removeFrame(List * list, int pos) {
+struct Frame * removeFrame(List * list, int pos) {
     //check bounds
     if((pos < 0) || (pos >= list->size)) return 0;
     Frame * aux  = list->frames[pos];

@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-MMU initMemSystem(){
+//MMU initMemSystem(){
 
 
-}
+//}
 void freeMemSystem(MMU * mmu){
 
 
@@ -20,7 +20,7 @@ PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr){
     //logic addr 24 bit diviso in frame 8 bit => MSB primi 16 bit di logic addr (page number)
     printf("page number: %d \n", page_number); 
 
-    int offset = logicAddr & 0xFF; // logicAddr & 1111 1111
+    int offset = logicAddr.addr & 0xFF; // logicAddr & 1111 1111
     //LSB ultimi 8 bit di logic addr
     PhysicalAddress * addrFisico = (PhysicalAddress *)malloc(sizeof(PhysicalAddress));
 
@@ -49,11 +49,11 @@ void MMU_exception(MMU * mmu, int pos) {
         //ho un frame libero in ram => carico il frame direttamente
 
         //rimuovo il primo frame libero
-        in = removeFrame(mmu->frame_memory_wrapper->freeFrames->frames, 0);
+        in = removeFrame(mmu->frame_memory_wrapper->freeFrames, 0);
 
         //aggiorno la page table e carico il frame in memoria fisica
-        mmu->page_table->pages[pos].flags[Valid] = 1; // TO CHECK
-        printf("page number %d :flags: %d \n", pos, mmu->page_table->pages[pos].flags);
+        mmu->page_table->pages[pos].flags |= Valid;
+        //printf("page number %d :flags: %d \n", pos, mmu->page_table->pages[pos].flags);
         mmu->page_table->pages[pos].frame_number = in->frame_number;
 
 
