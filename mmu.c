@@ -5,14 +5,61 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
 
-//MMU initMemSystem(){
+MMU initMemSystem(){
+//inizializzo le strutture dati
+    MMU mmu;
+    mmu.page_table = (Page_Table *) malloc(sizeof(Page_Table));
+    mmu.frame_memory_wrapper = (FrameMemoryWrapper *) malloc(sizeof(FrameMemoryWrapper));
+    mmu.swap_file = fopen("swap_file.bin", "w");
 
-
-//}
+//SWAP
+    char c = "";
+    fseek(mmu.swap_file, 0, SEEK_SET); //azzero l'indice di scorrimento del file
+    for (int i = 0; i < SIZE_VIRTUAL_MEMORY; i++){ //creo il file di 16 MB
+        fwrite(&c, sizeof(char), 1, mmu.swap_file);
+    }
+//MEM
+    //mmu.frame_memory_wrapper->frames          MEMORIA FISICA !!
+    mmu.frame_memory_wrapper->freeFrames = malloc(sizeof(List));
+    mmu.frame_memory_wrapper->num_frames = NUM_FRAMES; 
+    //inizialmente ci sono NUM_FRAMES frame liberi in ram
+    init(mmu.frame_memory_wrapper->freeFrames); //struttura di gestione dei frame liberi
+    for(int i = 0; i < NUM_FRAMES; i++){
+        //mmu.frame_memory_wrapper->frames[i].offset            NON IMPLEMETATO
+        memset(mmu.frame_memory_wrapper->frames[i].info, 0, SIZE_PAGE);
+        //azzero il frame  in memoria
+        mmu.frame_memory_wrapper->frames[i].flags = 0;
+        //setto il Frame a libero
+        add(mmu.frame_memory_wrapper->freeFrames, &(mmu.frame_memory_wrapper->frames[i]));
+        //aggiungo il frame appena creato alla lista dei frame liberi
+    }
+    //devo allocare la tabella delle pagine all'inizio della memoria 
+    for (int i = 0; i < (SIZE_PAGE_TABLE / SIZE_PAGE); i++){
+        Frame * riservato = removeFrame(mmu.frame_memory_wrapper->freeFrames, 0);
+        riservato->flags |= ValidFrame;
+        riservato->flags |= Reserved;
+    }
+//PAGES
+    for (int i = 0; i < NUM_PAGES; i++){
+        mmu.page_table->pages[i].frame_number = -1;
+        mmu.page_table->pages[i].flags = 0;
+    }
+    mmu.page_table->num_pages = NUM_PAGES;
+    
+    printf("avvio del sistema... inizializzazione \n");
+    return mmu;
+}
 void freeMemSystem(MMU * mmu){
+    fclose(mmu->swap_file);
+    
+    free(mmu->frame_memory_wrapper->frames);
+    free(mmu->frame_memory_wrapper);
 
-
+    free(mmu->page_table);
+    printf("chiusura del sistema \n");
 }
 
 PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr){

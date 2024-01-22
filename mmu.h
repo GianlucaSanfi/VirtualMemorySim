@@ -18,15 +18,18 @@ typedef enum PageFlags{
     Write_bit = 0x8
 } PageFlags;
 typedef enum FrameFlags{
-    Swapped = 0x1
+    ValidFrame = 0x1,
+    Reserved = 0x2
 } FrameFlags;
 
 //struttura di un Frame
 typedef struct Frame {
-    char info[SIZE_PAGE];
-    uint32_t offset_info;
+    char info[SIZE_PAGE]; //ogni pagina/frame ha 256 char di info
+    uint32_t offset_info; //offset dell'info a cui voglio accedere con LogicAddr
     uint32_t frame_number;
-    uint32_t flags: 1; //bit SWAPPED per la page table
+    uint32_t flags: 2; 
+    //bit ValidFrame = 0 se frame è libero
+    //bit Reserved = 1 se frame è del S.O.
 } Frame;
 
 //spazio di swap come lista di frame di dimensione massima: NUM_PAGES
@@ -45,7 +48,7 @@ typedef struct FrameMemoryWrapper {
 //elemento della tabella delle pagine
 typedef struct PageEntry {
     uint32_t frame_number:  BIT_FRAME;
-    uint32_t flags:   BIT_PAGE_FLAGS
+    uint32_t flags:   BIT_PAGE_FLAGS;
 } PageEntry;
 
 //tabella delle pagine

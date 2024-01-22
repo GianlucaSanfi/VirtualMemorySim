@@ -14,12 +14,12 @@
 #define SIZE_PHYSICAL_MEMORY (1 << BIT_PHYSICAL_ADDR)
 
 #define SIZE_PAGE (1 << (BIT_FRAME))
-#define NUM_PAGES (SIZE_VIRTUAL_MEMORY / (1 << BIT_FRAME))
+#define NUM_PAGES (SIZE_VIRTUAL_MEMORY / SIZE_PAGE)
 
 //dimensione della tabella delle pagine
 #define SIZE_PAGE_TABLE (NUM_PAGES * (BIT_FRAME + BIT_PAGE_FLAGS))
 
 //totale dei frame memoria fisica
-#define NUM_FRAMES (SIZE_PHYSICAL_MEMORY / (1 << BIT_FRAME))
+#define NUM_FRAMES (SIZE_PHYSICAL_MEMORY / SIZE_PAGE)
 
 
