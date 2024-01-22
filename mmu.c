@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <string.h>
 
 MMU initMemSystem(){
@@ -175,6 +174,15 @@ void MMU_writeByte(MMU * mmu, int pos, char c) {
 
 }
 char * MMU_readByte(MMU * mmu, int pos){
+    char * info = malloc(sizeof(char));
+    LogicAddress l;
+    l.addr = pos & 0xFFFFFF;
+    PhysicalAddress phy = getPhysicalAddr(mmu, l);
+    uint32_t frame_number = (phy.addr >> 8) & 0xFFF; //MSB 12 bit
+    Frame * frame = &(mmu->frame_memory_wrapper->frames[frame_number]);
+    int off = phy.addr & 0xFF;
 
-    return " ";
+    info = frame->info[off];
+    frame->flags |= Read_bit;
+    return info;
 }
