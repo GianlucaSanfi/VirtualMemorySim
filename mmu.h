@@ -25,8 +25,8 @@ typedef enum FrameFlags{
 //struttura di un Frame
 typedef struct Frame {
     char info[SIZE_PAGE]; //ogni pagina/frame ha 256 char di info
-    uint32_t offset_info; //offset dell'info a cui voglio accedere con LogicAddr
-    uint32_t frame_number;
+    uint32_t page_number: 16;
+    uint32_t frame_number: 12;
     uint32_t flags: 2; 
     //bit ValidFrame = 0 se frame è libero
     //bit Reserved = 1 se frame è del S.O.
