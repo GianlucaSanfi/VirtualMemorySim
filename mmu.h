@@ -1,87 +1,84 @@
 #pragma once
 #include <stdint.h>
+#include <stdio.h>
 #include "globals.h"
-#include "list.h"
+
 
 typedef struct PhysicalAddress{
     uint32_t addr:  20;
 } PhysicalAddress;
-typedef struct LogicAddress{
-    uint32_t addr: 24;
-} LogicAddress;
 
-//flags supportati: valid, unswappable, read, write
+typedef struct LogicalAddress{
+    uint32_t addr: 24;
+} LogicalAddress;
+
+//flags supportati: valid, unswappable, read, write, swapped
 typedef enum PageFlags{
     Valid = 0x1,
     Unswappable = 0x2,
-    Read_bit = 0x4,
-    Write_bit = 0x8
+    Read = 0x4,
+    Write = 0x8,
+    Swapped = 0x10
 } PageFlags;
-typedef enum FrameFlags{
-    ValidFrame = 0x1,
-    Reserved = 0x2
-} FrameFlags;
 
 //struttura di un Frame
 typedef struct Frame {
-    char info[SIZE_PAGE]; //ogni pagina/frame ha 256 char di info
-    uint32_t page_number: 16;
-    uint32_t frame_number: 12;
-    uint32_t flags: 2; 
-    //bit ValidFrame = 0 se frame è libero
-    //bit Reserved = 1 se frame è del S.O.
+    char info[SIZE_PAGE];
+    uint32_t page_number: BIT_FRAME;
 } Frame;
 
-//spazio di swap come lista di frame di dimensione massima: NUM_PAGES
-/*typedef struct swap_space {
-    Frame * swap_frames[NUM_PAGES];
-    uint32_t size;
-} swap_space;*/
+typedef struct TLB {
+    // FUNZIONE NON IMPLEMENTATA
+} TLB;
 
-//wrapper della struttura di frames della mem fisica
-typedef struct FrameMemoryWrapper {
+typedef struct Memory {
     Frame frames[NUM_FRAMES];
-    uint32_t num_frames;
-    struct List * freeFrames;
-} FrameMemoryWrapper;
+    int size;
+} Memory;
 
 //elemento della tabella delle pagine
 typedef struct PageEntry {
-    uint32_t frame_number:  BIT_FRAME;
+    uint32_t frame_number:  BIT_FRAME_NUMBER;
     uint32_t flags:   BIT_PAGE_FLAGS;
 } PageEntry;
 
 //tabella delle pagine
-typedef struct Page_Table {
+typedef struct PageTable {
     PageEntry pages[NUM_PAGES];
-    uint32_t num_pages;
-} Page_Table;
+    int size;
+} PageTable;
+
+typedef struct Statistics {
+    int TOTAL_PAGE_FAULTS;
+} Statistics;
 
 // MMU
-/* 
-Tiene sincronizzata la tabella delle pagine 
-    con lo swap_file e la lista di frame in mem fisica.
-Se il bit di invalidità della pagina è 1 
-    allora la pagina(il frame) si trova in swap space
-*/
 typedef struct MMU {
-    Page_Table * page_table;
-    FrameMemoryWrapper * frame_memory_wrapper;
+    PageTable * pageTable;
+    Memory * memory;
     FILE * swap_file;
+
+    //TLB * tlb; non implementato
+
+    Statistics * stats;
 } MMU;
 
 //scrive un Byte (char c) data la pos
 void MMU_writeByte(MMU * mmu, int pos, char c);
+
 //legge un Byte (char) data la pos
 char * MMU_readByte(MMU * mmu, int pos);
+
 //PAGE FAULT HANDLER 
 //(pos è il numero di pagina alla quale si è tentato di accedere)
-void MMU_exception(MMU * mmu, int pos);
+//ritorna 0 se andato a buon fine e -1 se errore
+int MMU_exception(MMU * mmu, int pos);
 
 //traduzione indirizzo logico -> fisico
-PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr);
+PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr);
 
 //init delle strutture di gestione memoria MMU
 MMU initMemSystem();
+
 //libero le risorse allocate con la init
 void freeMemSystem(MMU * mmu);

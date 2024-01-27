@@ -2,16 +2,22 @@
 #include "globals.h"
 #include "stdio.h"
 #include "mmu.h"
-struct Frame;
+typedef struct TLBFrame {
+    uint32_t page_number: BIT_FRAME;
+    uint32_t frame_number: BIT_FRAME_NUMBER;
+}TLBFrame;
+
 typedef struct List {
-    struct Frame * frames[NUM_FRAMES];
+    TLBFrame * frames[NUM_TLB_FRAMES];
     int size;
 } List;
 
 void init(List * list);
 int isEmpty(List * list);
 
-struct Frame * get(List * list, int pos);
-int add(List * list, struct Frame * frame);
-struct Frame * removeFrame(List * list, int pos);
-
+//aggiunge in testa alla lista
+int add(List * list, TLBFrame * frame);
+//rimuove e restituisce la coda della lista
+TLBFrame * removeFrame(List * list);
+//restituisce il TLBframe in pos pos della lista
+TLBFrame * get(List * list, int pos);

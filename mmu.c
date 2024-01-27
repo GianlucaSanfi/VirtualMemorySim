@@ -1,6 +1,5 @@
 #include "mmu.h"
 #include "globals.h"
-#include "list.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,11 +7,12 @@
 #include <string.h>
 
 MMU initMemSystem(){
+    printf("avvio del sistema... inizializzazione \n");
 //inizializzo le strutture dati
     MMU mmu;
-    mmu.page_table = (Page_Table *) malloc(sizeof(Page_Table));
-    mmu.frame_memory_wrapper = (FrameMemoryWrapper *) malloc(sizeof(FrameMemoryWrapper));
-    mmu.swap_file = fopen("swap_file.bin", "w");
+    mmu.pageTable = (PageTable *) malloc(sizeof(PageTable));
+    mmu.memory = (Memory *) malloc(sizeof(Memory));
+    mmu.swap_file = fopen("swap_file.bin", "w+");
 
 //SWAP
     char c = 0;
@@ -20,76 +20,77 @@ MMU initMemSystem(){
     for (int i = 0; i < SIZE_VIRTUAL_MEMORY; i++){ //creo il file di 16 MB
         fwrite(&c, sizeof(char), 1, mmu.swap_file);
     }
+
 //MEM
-    //mmu.frame_memory_wrapper->frames          MEMORIA FISICA !!
-    mmu.frame_memory_wrapper->freeFrames = malloc(sizeof(List));
-    mmu.frame_memory_wrapper->num_frames = NUM_FRAMES; 
-    //inizialmente ci sono NUM_FRAMES frame liberi in ram
-    init(mmu.frame_memory_wrapper->freeFrames); //struttura di gestione dei frame liberi
-    //printf("debug: ho creato la memoria ram 0");
     for(int i = 0; i < NUM_FRAMES; i++){
-        mmu.frame_memory_wrapper->frames[i].page_number = -1;
-        mmu.frame_memory_wrapper->frames[i].frame_number = (i & 0xFFF);
-        
-        memset(mmu.frame_memory_wrapper->frames[i].info, 0, SIZE_PAGE);
+        mmu.memory->frames[i].page_number = -1;
+        memset(mmu.memory->frames[i].info, 0, SIZE_PAGE);
         //azzero il frame  in memoria
-        mmu.frame_memory_wrapper->frames[i].flags = Valid;
-        //setto il Frame a libero
-        add(mmu.frame_memory_wrapper->freeFrames, &(mmu.frame_memory_wrapper->frames[i]));
-        //aggiungo il frame appena creato alla lista dei frame liberi
     }
-    //devo allocare la tabella delle pagine all'inizio della memoria 
-    for (int i = 0; i < (SIZE_PAGE_TABLE / SIZE_PAGE); i++){
-        Frame * riservato = removeFrame(mmu.frame_memory_wrapper->freeFrames, 0);
-        riservato->flags |= Unswappable;
-    }
+    mmu.memory->size = 0;
+    
 //PAGES
     for (int i = 0; i < NUM_PAGES; i++){
-        mmu.page_table->pages[i].frame_number = 0;
-        mmu.page_table->pages[i].flags = 0;
+        mmu.pageTable->pages[i].frame_number = 0;
+        mmu.pageTable->pages[i].flags = 0;
     }
-    mmu.page_table->num_pages = NUM_PAGES;
+    mmu.pageTable->size = 0;
+
+    //devo allocare la tabella delle pagine all'inizio della memoria 
+    int frames_for_pageTable = (sizeof(PageTable) / SIZE_PAGE);
+    // = ((sizeof(PageEntry) * NUM_PAGES + sizeof(int))/ SIZE_PAGE);
+    for (int i = 0; i < frames_for_pageTable; i++){
+        mmu.pageTable->pages[i].flags |= Unswappable;
+        mmu.pageTable->size++;
+    }
+//STATISTICS
+    mmu.stats->TOTAL_PAGE_FAULTS = 0;
     
-    printf("avvio del sistema... inizializzazione \n");
+    printf("avvio del sistema... inizializzazione completata \n");
     return mmu;
 }
-void freeMemSystem(MMU * mmu){
-    fclose(mmu->swap_file);
-    
-    free(mmu->frame_memory_wrapper->freeFrames);
-    free(mmu->frame_memory_wrapper);
 
-    free(mmu->page_table);
-    printf("chiusura del sistema \n");
+void freeMemSystem(MMU * mmu){
+    printf("chiusura del sistema... ");
+
+    fclose(mmu->swap_file);
+    free(mmu->memory);
+    free(mmu->pageTable);
+
+    printf("% % % % % % ");
+    printf("...chiusura del sistema completata\n");
 }
 
-PhysicalAddress getPhysicalAddr(MMU * mmu, LogicAddress logicAddr){
-    int page_number = (logicAddr.addr >> BIT_FRAME) & 0xFFFF;
-    //logic addr 24 bit diviso in frame 8 bit => MSB primi 16 bit di logic addr (page number)
-    //printf("page number: %x \n", page_number); 
+PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
 
-    int offset = logicAddr.addr & 0xFF; // logicAddr & 1111 1111
-    //LSB ultimi 8 bit di logic addr
-    //printf("offset : %x \n", offset);
-    PhysicalAddress * addrFisico = (PhysicalAddress *)malloc(sizeof(PhysicalAddress));
-
-    if(!(mmu->page_table->pages[page_number].flags & Valid)){
-        //la pagina richiesta (frame) non sta in mem fisica ma in swap
+    int page_number = (logicAddr.addr >> BIT_FRAME) & 0xFFF; 
+    int offset = logicAddr.addr & 0xFFF;
+    
+    if(!(mmu->pageTable->pages[page_number].flags & Valid)){
+        //la pagina richiesta (frame) non è valida
         //PAGE FAULT
         printf("PAGE FAULT \n");
-        MMU_exception(mmu, page_number); 
-        //fa lo swap in della pagina richiesta con politica SECOND CHANCE ALG
-        //una volta completata l'operazione la tab pagine avrà invalid bit a false
-        // e punterà al frame corretto in mem fisica
+        if(MMU_exception(mmu, page_number) != 0) return NULL; 
+        
     }
+    PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
 
-    int frame_number = mmu->page_table->pages[page_number].frame_number;
+    int frame_number = mmu->pageTable->pages[page_number].frame_number;
     //printf("frame number : %x \n", frame_number);
-    addrFisico->addr = (frame_number << (20-8) ) | offset;
+    addrFisico->addr = (frame_number << 12 ) | offset;
     return *addrFisico;
 }
 
-void MMU_exception(MMU * mmu, int page_number) {
+int _swap_in(MMU * mmu){
+
+    return 0;
+}
+int -swap_out(MMU * mmu){
+
+    return 0;
+}
+
+int MMU_exception(MMU * mmu, int page_number) {
     //pos è la page_number alla quale si è tentato di accedere 
     //AGE FAULT da gestire
     //fare swap out di un frame in mem fisica se completa (no Reserved)
@@ -150,7 +151,7 @@ void MMU_exception(MMU * mmu, int page_number) {
     //devo settare il frame ad occupato e aggiornare la page number
     out->page_number = page_number;
     out->flags &= ~Valid;
-    return;
+    return 0; //OK
 }
 
 
@@ -169,7 +170,7 @@ void MMU_writeByte(MMU * mmu, int pos, char c) {
     fseek(mmu->swap_file, frame->page_number, SEEK_SET); 
     //posiziono il cursore all'indice page_number
     for(int i = 0; i < 256; i++)
-        fwrite(&(frame->info[i], sizeof(char), 1, mmu->swap_file));
+        fwrite(&(frame->info[i]), sizeof(char), 1, mmu->swap_file);
     return;
 
 }
