@@ -6,22 +6,8 @@ memoria fisica (1 MB): lista di Frame
 
 indirizzi logici a 24 bit  
 indirizzi fisici a 20 bit  
-frame di dimensione (frame size):  256 Byte
+frame di dimensione:  4096 Byte
+
+NOTA: TLB (translation lookaside buffer) non implementato
 
 politica di page replacement (swap): second chance algorithm  
-
-Memoria fisica implementata come lista (array) di Frame  
-    init(List * list)    
-    isEmpty(List * list)     
-    get(List * list, int pos)    
-    add(List * list, Frame * frame)  
-    removeFrame(List * list, int pos)    
-
-La MMU contiene i puntatori alla struttura:  
-    tabella delle pagine     
-    wrapper della memoria fisica (lista di frame)    
-    spazio di swap (lista di frame)
-e menatiene sincronizzate le strutture a seguito delle invocazioni dei metodi che fanno side effect sulla memoria (accessi in lettura/scrittura).   
-Se il bit Valid nella tabela delle pagine è true allora il frame puntato dalla pagina si trova in swap space oppure non è ancora stato caricato => accesso a tale frame genera un page fault. 
-
-La lista di Frame della memoria fisica ha gli stessi flag della tabella delle pagine (Valid => libero)

@@ -57,11 +57,10 @@ void freeMemSystem(MMU * mmu){
     free(mmu->memory);
     free(mmu->pageTable);
 
-    printf("% % % % % % ");
     printf("...chiusura del sistema completata\n");
 }
 
-PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
+PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
 
     int page_number = (logicAddr.addr >> BIT_FRAME) & 0xFFF; 
     int offset = logicAddr.addr & 0xFFF;
@@ -70,7 +69,11 @@ PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
         //la pagina richiesta (frame) non è valida
         //PAGE FAULT
         printf("PAGE FAULT \n");
-        if(MMU_exception(mmu, page_number) != 0) return NULL; 
+        if(MMU_exception(mmu, page_number) != 0){
+            PhysicalAddress aux;
+            aux.addr = NULL;
+            return aux;
+        }
         
     }
     PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
@@ -78,7 +81,7 @@ PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
     int frame_number = mmu->pageTable->pages[page_number].frame_number;
     //printf("frame number : %x \n", frame_number);
     addrFisico->addr = (frame_number << 12 ) | offset;
-    return *addrFisico;
+    return addrFisico;
 }
 
 int _swap_in(MMU * mmu){
@@ -94,6 +97,8 @@ int MMU_exception(MMU * mmu, int page_number) {
     //pos è la page_number alla quale si è tentato di accedere     
 
     mmu->stats->TOTAL_PAGE_FAULTS++;
+    if(mmu->pageTable->pages[page_number].flags & Swapped)
+        return -1; //KO
 
     //in memoria ho frame liberi (NO SWAP)
     if(mmu->memory->size < NUM_FRAMES){
