@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "globals.h"
 #include <stdlib.h>
 
 /* void test_conversione_addr(MMU * mmu, int address){

@@ -85,42 +85,39 @@ int _swap_in(MMU * mmu){
 
     return 0;
 }
-int -swap_out(MMU * mmu){
+int _swap_out(MMU * mmu){
 
     return 0;
 }
 
 int MMU_exception(MMU * mmu, int page_number) {
-    //pos è la page_number alla quale si è tentato di accedere 
-    //AGE FAULT da gestire
-    //fare swap out di un frame in mem fisica se completa (no Reserved)
-    // e swap in del frame richiesto (pagina) dallo spazio swap
+    //pos è la page_number alla quale si è tentato di accedere     
 
-    
+    mmu->stats->TOTAL_PAGE_FAULTS++;
 
-    //1) in memoria ho frame liberi (no SWAP OUT)
-    if(!isEmpty(mmu->frame_memory_wrapper->freeFrames)){
-        //ho un frame libero in ram => carico il frame direttamente
-        Frame * in;
-        //rimuovo il primo frame libero
-        in = removeFrame(mmu->frame_memory_wrapper->freeFrames, 0);
-
-        //aggiorno la page table
-        mmu->page_table->pages[page_number].flags |= Valid;
-        //printf("page number %x :flags: %x \n", page_number, mmu->page_table->pages[page_number].flags);
-        mmu->page_table->pages[page_number].frame_number =  in->frame_number;
-        
+    //in memoria ho frame liberi (NO SWAP)
+    if(mmu->memory->size < NUM_FRAMES){
+        int i = 4;
+        for(; i < NUM_FRAMES; i++ ){
+            if(mmu->memory->frames[i].page_number != -1)
+                continue;
+            else
+                break;            
+        }
+        //i = indice del frame libero
+        mmu->pageTable->pages[page_number].frame_number =  i;
+        mmu->pageTable->pages[page_number].flags = Valid;
         //devo settare il frame ad occupato e aggiornare la page number
-        in->page_number = page_number;
-        in->flags &= ~Valid;
-        return;
+        mmu->memory->frames[i].page_number = page_number;
+        return 0; //OK
     }
-    //2) in memoria NON ho frame liberi (SWAP OUT)
+
+    //in memoria NON ho frame liberi (SWAP) SECOND CHANCE
     int choose = 0, i = 0;
     Frame * out;
     while(!choose){
         //SECOND CHANCE ALGORITHM
-        out = &(mmu->frame_memory_wrapper->frames[i]);
+        out = &(mmu->memory->frames[i]);
         uint32_t out_flags = out->flags;
 
         if(out_flags & Unswappable)

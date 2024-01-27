@@ -1,21 +1,23 @@
 CC= gcc
-CCOPTS= -std=gnu99 -g -Wall
+CCOPTS= --std=gnu99 -g -Wall
 AR= ar
 
-OBJS= mmu.o test.o
+OBJS= mmu.o
 
-mmu.o: mmu.c mmu.h globals.h
-	$(CC) $(CCOPTS) -c mmu.c
+HEAD= globals.h mmu.h
+
+%.o:	%.c $(HEAD)
+	$(CC) $(CCOPTS) -c -o $@  $<
 .phony: clean all
 
-test.o: test.c mmu.h globals.h
-	$(CC) $(CCOPTS) -c test.c
-.phony: clean all
+all: test lib.a
 
-all: test
+lib.a: $(OBJS)
+	$(AR) -rcs $@ $^
+	$(RM) $(OBJS)
 
-test: $(OBJS)
-	$(CC) $(CCOPTS) -o test $(OBJS)
+test: test.c $(OBJS)
+	$(CC) $(CCOPTS) -o $@ $^
 
 clean:
-	rm -rf test *.o
+	rm -rf *.o *~ lib.a test
