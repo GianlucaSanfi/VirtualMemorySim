@@ -54,7 +54,8 @@ typedef struct Statistics {
 
 typedef enum MMUFLAGS {
     READ = 0x1,
-    WRITE = 0x2
+    WRITE = 0x2,
+    VERBOSE = 0x4
 } MMUFLAGS;
 
 // MMU
@@ -62,7 +63,7 @@ typedef struct MMU {
     PageTable * pageTable;
     Memory * memory;
     FILE * swap_file;
-    uint8_t flags: 2;
+    uint8_t flags: 3;
 
     //TLB * tlb; non implementato
 
