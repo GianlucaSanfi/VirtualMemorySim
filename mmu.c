@@ -144,7 +144,7 @@ int sca(MMU * mmu, int page_number){
             continue;
         }
         //read = 0 & write = 0 => swap out
-        if((!(mmu->pageTable->pages[num_pag_frame].flags & Read)) && (!(mmu->pageTable->pages[num_pag_frame].flags & Write)){ 
+        if((!(mmu->pageTable->pages[num_pag_frame].flags & Read)) && (!(mmu->pageTable->pages[num_pag_frame].flags & Write))){ 
             printf("SWAP OUT page: %d \n", num_pag_frame);
             control = 1;
             continue;
@@ -163,8 +163,10 @@ int sca(MMU * mmu, int page_number){
             second_chance_w++;
             if(second_chance_control == 2){ // ci sono 0,1
                 control = 1;
+                printf("SWAP OUT page: %d \n", num_pag_frame);
             }
-            printf("SWAP OUT page: %d \n", num_pag_frame);
+            mmu->pageTable->pages[num_pag_frame].flags &= ~Write;
+            mmu->pageTable->pages[num_pag_frame].flags |= Read;
             continue;
         }
         //read = 1 & write = 1
@@ -174,11 +176,9 @@ int sca(MMU * mmu, int page_number){
             second_chance_rw++;
             if(second_chance_control == 1){ // sono tutti 1,1
                 control = 1;
+                printf("SWAP OUT page: %d \n", num_pag_frame);
             }
-            if(second_chance_control == 2){ // ci sono 0,1
-                mmu->pageTable->pages[num_pag_frame].flags &= ~Read;
-            }
-            printf("SWAP OUT page: %d \n", num_pag_frame);
+            mmu->pageTable->pages[num_pag_frame].flags &= ~Read;
             continue;
         }
     }
@@ -331,8 +331,8 @@ void MMU_writeByte(MMU * mmu, int pos, char c) {
         return;
     }
 
-    int frame_number = (physical.addr >> BIT_FRAME) & 0xFF; //MSB 8 bit
-    int off = physical.addr & 0xFFF;
+    int frame_number = (physical->addr >> BIT_FRAME) & 0xFF; //MSB 8 bit
+    int off = physical->addr & 0xFFF;
 
     mmu->memory->frames[frame_number].info[off] = c;
     int pag = mmu->memory->frames[frame_number].page_number;
@@ -357,8 +357,8 @@ char * MMU_readByte(MMU * mmu, int pos){
     }
 
     char * info = malloc(sizeof(char));
-    int frame_number = (physical.addr >> BIT_FRAME) & 0xFF; //MSB 8 bit
-    int off = physical.addr & 0xFFF;
+    int frame_number = (physical->addr >> BIT_FRAME) & 0xFF; //MSB 8 bit
+    int off = physical->addr & 0xFFF;
 
     info = &(mmu->memory->frames[frame_number].info[off]);
     int pag = mmu->memory->frames[frame_number].page_number;
