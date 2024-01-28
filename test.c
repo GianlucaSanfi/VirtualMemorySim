@@ -10,7 +10,7 @@
 
 int main(int argc, char * argv[]) {
 
-    MMU mmu = initMemSystem();
+    MMU * mmu = initMemSystem();
     /* //test_conversione_addr(&mmu, 0xab5F81);
     // page 43871, offset 129 decimale
 
@@ -31,6 +31,6 @@ int main(int argc, char * argv[]) {
         //MMU_writeByte
     }  */
     
-    freeMemSystem(&mmu);
+    freeMemSystem(mmu);
     return 0;
 }

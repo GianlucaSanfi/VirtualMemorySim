@@ -52,11 +52,17 @@ typedef struct Statistics {
     int TOTAL_PAGE_FAULTS;
 } Statistics;
 
+typedef enum MMUFLAGS {
+    READ = 0x1,
+    WRITE = 0x2
+} MMUFLAGS;
+
 // MMU
 typedef struct MMU {
     PageTable * pageTable;
     Memory * memory;
     FILE * swap_file;
+    uint8_t flags: 2;
 
     //TLB * tlb; non implementato
 
@@ -75,10 +81,10 @@ char * MMU_readByte(MMU * mmu, int pos);
 int MMU_exception(MMU * mmu, int pos);
 
 //traduzione indirizzo logico -> fisico
-PhysicalAddress getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr);
+PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr);
 
 //init delle strutture di gestione memoria MMU
-MMU initMemSystem();
+MMU * initMemSystem();
 
 //libero le risorse allocate con la init
 void freeMemSystem(MMU * mmu);
