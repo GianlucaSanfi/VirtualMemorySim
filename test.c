@@ -12,10 +12,14 @@ int main(int argc, char * argv[]) {
 
     MMU * mmu = initMemSystem();
     if(argc >1){ //verbose
-        printf("VERBOSE = true");
+        printf("|==================|\n");
+        printf("|  VERBOSE = true  |\n");
+        printf("|==================|\n");
         mmu->flags |= VERBOSE;
     } else {
-        printf("VERBOSE = false");
+        printf("|===================|\n");
+        printf("|  VERBOSE = false  |\n");
+        printf("|===================|\n");
     }
     /* //test_conversione_addr(&mmu, 0xab5F81);
     // page 43871, offset 129 decimale

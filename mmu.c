@@ -7,7 +7,7 @@
 #include <string.h>
 
 MMU * initMemSystem(){
-    printf("avvio del sistema... inizializzazione \n");
+    printf("avvio del sistema... inizializzazione\n");
 //inizializzo le strutture dati
     MMU * mmu = malloc(sizeof(MMU));
     mmu->pageTable = (PageTable *) malloc(sizeof(PageTable));
@@ -48,12 +48,14 @@ MMU * initMemSystem(){
 //STATISTICS
     mmu->stats->TOTAL_PAGE_FAULTS = 0;
     
-    printf("avvio del sistema... inizializzazione completata \n");
+    printf("...inizializzazione completata\n");
+    printf("----------------------------------------------------\n");
     return mmu;
 }
 
 void freeMemSystem(MMU * mmu){
-    printf("chiusura del sistema... ");
+    printf("----------------------------------------------------\n");
+    printf("chiusura del sistema...\n");
 
     fclose(mmu->swap_file);
     free(mmu->memory);
@@ -123,6 +125,7 @@ int sca(MMU * mmu, int page_number){
     int i = 0; //indice dell'attuale frame vittima
     int control = 0; //trovato l'indice del frame vittima?
     int second_chance_rw = 0, second_chance_w = 0, second_chance_control = 0;
+    int ciclo_num = 1;
     while(!control){
         if(i >= NUM_FRAMES){
             i=0; //azzero l'indice
@@ -131,6 +134,8 @@ int sca(MMU * mmu, int page_number){
             else if(((second_chance_rw + second_chance_w) == NUM_FRAMES) && (second_chance_w > 0))
                 second_chance_control = 2;
             second_chance_rw = second_chance_w = 0;
+            if(mmu->flags & VERBOSE) 
+                printf("Ciclo numero: %d\n", ciclo_num++);
         }
         
         int num_pag_frame = mmu->memory->frames[i].page_number;
