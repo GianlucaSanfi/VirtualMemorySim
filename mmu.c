@@ -69,17 +69,23 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
 
     int page_number = (logicAddr.addr >> BIT_FRAME) & 0xFFF; 
     int offset = logicAddr.addr & 0xFFF;
+
+    PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
+    
+    // SICUREZZA: controllo che l'addr sia nei range giusti
+    if((page_number > NUM_PAGES) || (page_number < 0)){
+        addrFisico->addr = NULL;
+        return addrFisico;
+    }
     
     if(!(mmu->pageTable->pages[page_number].flags & Valid)){
         //la pagina richiesta (frame) non è valida
         //PAGE FAULT
         if(MMU_exception(mmu, page_number) != 0){
-            PhysicalAddress * aux;
-            aux->addr = NULL;
-            return aux;
+            addrFisico->addr = NULL;
+            return addrFisico;
         }
     }
-    PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
 
     int frame_number = mmu->pageTable->pages[page_number].frame_number;
     //printf("frame number : %x \n", frame_number);
@@ -115,13 +121,32 @@ int sca(MMU * mmu, int page_number){
     int i = 0; //indice dell'attuale frame vittima
     int control = 0; //trovato l'indice del frame vittima?
     while(!control){
-        if(i>=NUM_FRAMES){
+        if(i >= NUM_FRAMES){
             i=0; //azzero l'indice
         }
             
         // TO-DO 
+        //SECOND CHANCE ALGORITHM
+        /* out = &(mmu->memory->frames[i]);
+        uint32_t out_flags = out->flags;
 
-
+        if(out_flags & Unswappable)
+            continue;
+        if(((out_flags & Read)== 0) &&((out_flags &Write) == 0)){
+            choose = 1;
+            continue;
+        }
+        if(out_flags & Read){
+            out->flags &= ~Read; //abbasso il flag Read
+            continue;
+        }
+        if(out_flags & Write_bit){
+            out->flags |= Read; //alzo il flag Read
+            out->flags &= ~Write;
+            //se è stato modificato devo copiare il contenuto in swap per poterlo salvare
+            continue;
+        }
+        */
 
         i++;
     }
@@ -214,43 +239,8 @@ int MMU_exception(MMU * mmu, int page_number) {
             return 0;
         }
 
-    }
+    }   
 
-    //in memoria NON ho frame liberi (SWAP) SECOND CHANCE
-    Frame * out;
-    while(!choose){
-        //SECOND CHANCE ALGORITHM
-        /* out = &(mmu->memory->frames[i]);
-        uint32_t out_flags = out->flags;
-
-        if(out_flags & Unswappable)
-            continue;
-        if(((out_flags & Read)== 0) &&((out_flags &Write) == 0)){
-            choose = 1;
-            continue;
-        }
-        if(out_flags & Read){
-            out->flags &= ~Read; //abbasso il flag Read
-            continue;
-        }
-        if(out_flags & Write_bit){
-            out->flags |= Read; //alzo il flag Read
-            out->flags &= ~Write;
-            //se è stato modificato devo copiare il contenuto in swap per poterlo salvare
-            continue;
-        }
- */
-        i++;
-        if(i == NUM_FRAMES) i = 0;
-    }
-    //aggiorno la page table
-    //mmu->page_table->pages[page_number].flags |= Valid;
-    //mmu->page_table->pages[page_number].frame_number =  out->frame_number;
-        
-    //devo settare il frame ad occupato e aggiornare la page number
-    //out->page_number = page_number;
-    //out->flags &= ~Valid;
-    
     return 0; //OK
 }
 
