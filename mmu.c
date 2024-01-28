@@ -265,24 +265,22 @@ void MMU_writeByte(MMU * mmu, int pos, char c) {
     PhysicalAddress * physical = getPhysicalAddr(mmu, logical);
     if(physical->addr == NULL){
         printf("ERRORE: address fisico = NULL 'Possibile Segmentation Fault' \n");
+        free(physical);
         return;
     }
-        
-    //uint32_t frame_number = (physical.addr >> 8) & 0xFFF; //MSB 12 bit
-    //Frame * frame = &(mmu->frame_memory_wrapper->frames[frame_number]);
 
-    //int off = physical.addr & 0xFF;
-    //frame->info[off] = c;
+    int frame_number = (physical.addr >> BIT_FRAME) & 0xFF; //MSB 8 bit
+    int off = physical.addr & 0xFFF;
 
-    //fseek(mmu->swap_file, frame->page_number, SEEK_SET); 
-    //posiziono il cursore all'indice page_number
-    //for(int i = 0; i < 256; i++)
-        //fwrite(&(frame->info[i]), sizeof(char), 1, mmu->swap_file);
+    mmu->memory->frames[frame_number].info[off] = c;
+    int pag = mmu->memory->frames[frame_number].page_number;
+    mmu->pageTable->pages[pag].flags |= Write;
     
     free(physical);
+    mmu->flags = 0;
     return;
-
 }
+
 char * MMU_readByte(MMU * mmu, int pos){
     
     mmu->flags = READ;
@@ -305,5 +303,6 @@ char * MMU_readByte(MMU * mmu, int pos){
     mmu->pageTable->pages[pag].flags |= Read;
     
     free(physical);
+    mmu->flags = 0;
     return info;
 }
