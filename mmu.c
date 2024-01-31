@@ -7,6 +7,7 @@
 #include <string.h>
 
 MMU * initMemSystem(){
+    printf("-------------------------------START----------------------------\n");
     printf("avvio del sistema... inizializzazione\n");
 //inizializzo le strutture dati
     MMU * mmu = malloc(sizeof(MMU));
@@ -47,6 +48,8 @@ MMU * initMemSystem(){
     }
 //STATISTICS
     mmu->stats->TOTAL_PAGE_FAULTS = 0;
+    mmu->stats->TOTAL_SWAP_IN = 0;
+    mmu->stats->TOTAL_SWAP_OUT = 0;
     
     printf("...inizializzazione completata\n");
     printf("----------------------------------------------------\n");
@@ -65,12 +68,26 @@ void freeMemSystem(MMU * mmu){
     free(mmu);
 
     printf("...chiusura del sistema completata\n");
+    printf("====== ==  == ======     ====== ==  == ==== \n");
+    printf("====== ==  == ==         ==     ==  == =====\n");
+    printf("  ==   ====== ======     ====== === == ==  ==\n");
+    printf("  ==   ====== ======     ====== == === ==  ==\n");
+    printf("  ==   ==  == ==         ==     ==  == ======\n");
+    printf("  ==   ==  == ======     ====== ==  == ==== \n");
+}
+
+int checkTLB(int page_number){ 
+    //ritorna il frame_num o -1 se non presente
+    //NON IMPLEMENTATO
+    return -1;
 }
 
 PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
 
     int page_number = (logicAddr.addr >> BIT_FRAME) & 0xFFF; 
     int offset = logicAddr.addr & 0xFFF;
+    if(mmu->flags & VERBOSE)
+        printf("ind logico: page_num %x, offset %x \n", page_number, offset);
 
     PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
     
@@ -78,6 +95,12 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
     if((page_number > NUM_PAGES) || (page_number < 0)){
         addrFisico->addr = NULL;
         return addrFisico;
+    }
+    //controllo in TLB
+    int cached_frame = checkTLB(page_number);
+    if(cached_frame != -1){
+        
+        // NON IMPLEMENTATO
     }
     
     if(!(mmu->pageTable->pages[page_number].flags & Valid)){
@@ -103,6 +126,7 @@ int _swap_in(MMU * mmu, int pos_base, int frame_num){
         fread(&(mmu->memory->frames[frame_num].info[i]), sizeof(char), 1, mmu->swap_file);
     }
     //NON AZZERA IL CONTENUTO IN SWAP (blocco pos_base)
+    mmu->stats->TOTAL_SWAP_IN++;
     return 0;
 }
 
@@ -114,6 +138,7 @@ int _swap_out(MMU * mmu, int frame_num, int pos_base){
         fwrite(&(mmu->memory->frames[frame_num].info[i]), sizeof(char), 1, mmu->swap_file);
     }
     //NON AZZERA IL CONTENUTO IN MEMORIA (blocco frame_num)
+    mmu->stats->TOTAL_SWAP_OUT++;
     return 0;
 }
 
@@ -126,16 +151,20 @@ int sca(MMU * mmu, int page_number){
     int control = 0; //trovato l'indice del frame vittima?
     int second_chance_rw = 0, second_chance_w = 0, second_chance_control = 0;
     int ciclo_num = 1;
+    if(mmu->flags & VERBOSE) 
+        printf("Ciclo numero: %d\n", ciclo_num);
     while(!control){
         if(i >= NUM_FRAMES){
             i=0; //azzero l'indice
-            if(((second_chance_rw + second_chance_w) == NUM_FRAMES) && (second_chance_w == 0))
-                second_chance_control = 1;
-            else if(((second_chance_rw + second_chance_w) == NUM_FRAMES) && (second_chance_w > 0))
-                second_chance_control = 2;
+            if((second_chance_rw + second_chance_w) == NUM_FRAMES) {
+                if(second_chance_w == 0)
+                    second_chance_control = 1;
+                else
+                    second_chance_control = 2;
+            }    
             second_chance_rw = second_chance_w = 0;
             if(mmu->flags & VERBOSE) 
-                printf("Ciclo numero: %d\n", ciclo_num++);
+                printf("Ciclo numero: %d\n", ++ciclo_num);
         }
         
         int num_pag_frame = mmu->memory->frames[i].page_number;
@@ -158,6 +187,10 @@ int sca(MMU * mmu, int page_number){
         if((mmu->pageTable->pages[num_pag_frame].flags & Read) && (!(mmu->pageTable->pages[num_pag_frame].flags & Write))){
             if(mmu->flags & VERBOSE) 
                 printf("Read = true \n");
+            if(second_chance_control == 2){ // sono "tutti" 0,1
+                control = 1;
+                printf("tutti 0,1 => SWAP OUT page: %d \n", num_pag_frame);
+            }
             mmu->pageTable->pages[num_pag_frame].flags &= ~Read;
             continue;
         }
@@ -166,9 +199,9 @@ int sca(MMU * mmu, int page_number){
             if(mmu->flags & VERBOSE) 
                 printf("Write = true \n");
             second_chance_w++;
-            if(second_chance_control == 2){ // ci sono 0,1
+            if(second_chance_control == 1){ // sono tutti 1,1
                 control = 1;
-                printf("SWAP OUT page: %d \n", num_pag_frame);
+                printf("tutti 1,1 => SWAP OUT page: %d \n", num_pag_frame);
             }
             mmu->pageTable->pages[num_pag_frame].flags &= ~Write;
             mmu->pageTable->pages[num_pag_frame].flags |= Read;
@@ -179,10 +212,6 @@ int sca(MMU * mmu, int page_number){
             if(mmu->flags & VERBOSE) 
                 printf("Read & Write = true \n");
             second_chance_rw++;
-            if(second_chance_control == 1){ // sono tutti 1,1
-                control = 1;
-                printf("SWAP OUT page: %d \n", num_pag_frame);
-            }
             mmu->pageTable->pages[num_pag_frame].flags &= ~Read;
             continue;
         }
@@ -215,9 +244,9 @@ int MMU_exception(MMU * mmu, int page_number) {
         //c'è un frame libero in memoria (dubito)
             if(mmu->memory->size < NUM_FRAMES){
                 int i = 4;
-                for(; i < NUM_FRAMES; i++ ){
-                    if(mmu->memory->frames[i].page_number != -1)
-                        continue;
+                while( i < NUM_FRAMES ){
+                    if(mmu->memory->frames[i].page_number == -1)
+                        i++;
                     else
                         break;            
                 }
@@ -260,9 +289,9 @@ int MMU_exception(MMU * mmu, int page_number) {
     //devo scrivere una pagina (frame) NUOVA e ho spazio in memoria
         if((!(mmu->pageTable->pages[page_number].flags & Swapped)) && (mmu->memory->size < NUM_FRAMES)){
             int i = 4;
-            for(; i < NUM_FRAMES; i++ ){
-                if(mmu->memory->frames[i].page_number != -1)
-                    continue;
+            while( i < NUM_FRAMES ){
+                if(mmu->memory->frames[i].page_number == -1)
+                    i++;
                 else
                     break;            
             }
@@ -272,7 +301,6 @@ int MMU_exception(MMU * mmu, int page_number) {
             //devo settare il frame ad occupato e aggiornare la page number
             mmu->memory->frames[i].page_number = page_number;
             mmu->memory->size++;
-            
             return 0; //OK
 
         } else if (mmu->pageTable->pages[page_number].flags & Swapped){
@@ -283,9 +311,9 @@ int MMU_exception(MMU * mmu, int page_number) {
         //c'è un frame libero in memoria (dubito)
             if(mmu->memory->size < NUM_FRAMES){
                 int i = 4;
-                for(; i < NUM_FRAMES; i++ ){
-                    if(mmu->memory->frames[i].page_number != -1)
-                        continue;
+                while( i < NUM_FRAMES ){
+                    if(mmu->memory->frames[i].page_number == -1)
+                        i++;
                     else
                         break;            
                 }
@@ -318,7 +346,7 @@ int MMU_exception(MMU * mmu, int page_number) {
         }
     }   
 
-    return 0; //OK
+    return -1; //KO
 }
 
 

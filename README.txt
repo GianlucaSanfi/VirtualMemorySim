@@ -1,7 +1,7 @@
 # VirtualMemorySim
 API and Implementation of a Virtual Memory system simulator.
 _____________________________________________________________
-spazio totale di indicizzazione (16 MB): memoria virtuale  
+spazio totale indirizzabile (16 MB): memoria virtuale  
 memoria fisica (1 MB): lista di Frame  
 
 indirizzi logici a 24 bit  

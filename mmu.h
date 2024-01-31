@@ -50,6 +50,8 @@ typedef struct PageTable {
 
 typedef struct Statistics {
     int TOTAL_PAGE_FAULTS;
+    int TOTAL_SWAP_IN;
+    int TOTAL_SWAP_OUT;
 } Statistics;
 
 typedef enum MMUFLAGS {

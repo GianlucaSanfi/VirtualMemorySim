@@ -20,4 +20,4 @@ test: test.c $(OBJS)
 	$(CC) $(CCOPTS) -o $@ $^
 
 clean:
-	rm -rf *.o *~ lib.a test
+	rm -rf *.o swap_file.bin *~ lib.a test
