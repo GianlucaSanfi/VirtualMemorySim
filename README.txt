@@ -28,3 +28,6 @@ COMPILAZIONE: make
 Il programma di test può eseguire:
     * uno stress test con pattern di accesso sequenziale
     * uno stress test con pattern di accesso randomico
+Parametri di default:
+    sequenziale:    1536 WRITE,     1280 READ
+    randomico:      1536 WRITE,     1024 READ
