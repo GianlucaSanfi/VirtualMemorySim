@@ -44,6 +44,7 @@ MMU * initMemSystem(){
     // = ((sizeof(PageEntry) * NUM_PAGES + sizeof(int))/ SIZE_PAGE);
     for (int i = 0; i < frames_for_pageTable; i++){
         mmu->pageTable->pages[i].flags |= Unswappable;
+        mmu->memory->frames[i].page_number = i;
         mmu->pageTable->size++;
     }
 //STATISTICS
@@ -68,12 +69,15 @@ void freeMemSystem(MMU * mmu){
     free(mmu);
 
     printf("...chiusura del sistema completata\n");
-    printf("====== ==  == ======     ====== ==  == ==== \n");
-    printf("====== ==  == ==         ==     ==  == =====\n");
-    printf("  ==   ====== ======     ====== === == ==  ==\n");
-    printf("  ==   ====== ======     ====== == === ==  ==\n");
-    printf("  ==   ==  == ==         ==     ==  == ======\n");
-    printf("  ==   ==  == ======     ====== ==  == ==== \n");
+    printf("________________________________________________\n");
+    printf("| ====== ==  == ======     ====== ==  == ====   |\n");
+    printf("| ====== ==  == ==         ==     ==  == =====  |\n");
+    printf("|   ==   ====== ======     ====== === == ==  == |\n");
+    printf("|   ==   ====== ======     ====== == === ==  == |\n");
+    printf("|   ==   ==  == ==         ==     ==  == ====== |\n");
+    printf("|   ==   ==  == ======     ====== ==  == ====   |\n");
+    printf("|_______________________________________________|\n\n");
+
 }
 
 int checkTLB(int page_number){ 
@@ -92,10 +96,12 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
     PhysicalAddress * addrFisico = (PhysicalAddress *) malloc(sizeof(PhysicalAddress));
     
     // SICUREZZA: controllo che l'addr sia nei range giusti
-    if((page_number > NUM_PAGES) || (page_number < 0)){
-        addrFisico->addr = NULL;
-        return addrFisico;
-    }
+    //a questo livello il controllo è inutile 
+    //  poichè il parametro logicAddr fa un cast automatico a uint 24 bit
+    //if((page_number > NUM_PAGES) || (page_number < 0) || (offset > SIZE_PAGE) || (offset < 0)){
+    //    addrFisico->addr = NULL;
+    //    return addrFisico;
+    //}
     //controllo in TLB
     int cached_frame = checkTLB(page_number);
     if(cached_frame != -1){
@@ -226,8 +232,12 @@ int MMU_exception(MMU * mmu, int page_number) {
     mmu->stats->TOTAL_PAGE_FAULTS++;
     printf("PAGE FAULT n*: %d \n", mmu->stats->TOTAL_PAGE_FAULTS);
 
+    //posizione in swap 
+    int swap_idx = page_number * SIZE_PAGE;
+
 //READ OPS
     if (mmu->flags & READ){
+        printf("READ OPS\n");
         if(mmu->pageTable->pages[page_number].flags & Unswappable){
             printf("ATTENZIONE: La locazione rihiesta è riservata al S.O.\n");
             return -1;
@@ -236,12 +246,11 @@ int MMU_exception(MMU * mmu, int page_number) {
         if(!(mmu->pageTable->pages[page_number].flags & Swapped))
             return -1; //KO
 
-    //devo leggere su una pagina che era stata "swapped out"
+        //devo leggere su una pagina che era stata "swapped out"
         if (mmu->pageTable->pages[page_number].flags & Swapped){
-            //posizione in swap 
-            int swap_idx = page_number * SIZE_PAGE;
             
-        //c'è un frame libero in memoria (dubito)
+            
+            //c'è un frame libero in memoria (dubito)
             if(mmu->memory->size < NUM_FRAMES){
                 int i = 4;
                 while( i < NUM_FRAMES ){
@@ -261,7 +270,7 @@ int MMU_exception(MMU * mmu, int page_number) {
                 _swap_in(mmu, swap_idx, i);
                 return 0;
             }
-        //non c'è un frame libero in memoria => swap out, swap in
+            //non c'è un frame libero in memoria => swap out, swap in
             int out_frame_num = sca(mmu, page_number); // trovo il frame vittima in memoria
             int out_page_num = mmu->memory->frames[out_frame_num].page_number;
             _swap_out(mmu, out_frame_num, (out_page_num * SIZE_PAGE));
@@ -279,36 +288,52 @@ int MMU_exception(MMU * mmu, int page_number) {
         }
     }
 //WRITE OPS
-    if (mmu->flags & WRITE){
+    else if(mmu->flags & WRITE){
+        printf("WRITE OPS\n");
         //controllo se si tratta di un blocco di memoria riservata (Unswappable)
         if(mmu->pageTable->pages[page_number].flags & Unswappable){
             printf("ERRORE: si sta provando a scrivere su una locazione riservata, comando abortito \n");
             return -1;
         }
 
-    //devo scrivere una pagina (frame) NUOVA e ho spazio in memoria
-        if((!(mmu->pageTable->pages[page_number].flags & Swapped)) && (mmu->memory->size < NUM_FRAMES)){
-            int i = 4;
-            while( i < NUM_FRAMES ){
-                if(mmu->memory->frames[i].page_number == -1)
-                    i++;
-                else
-                    break;            
+        //devo scrivere una pagina (frame) NUOVA 
+        if(!(mmu->pageTable->pages[page_number].flags & Swapped)){
+            // ho spazio in memoria
+            if(mmu->memory->size < NUM_FRAMES){
+                int i = 4;
+                while( i < NUM_FRAMES ){
+                    if(mmu->memory->frames[i].page_number == -1)
+                        i++;
+                    else
+                        break;            
+                }
+                //i = indice del frame libero
+                mmu->pageTable->pages[page_number].frame_number =  i;
+                mmu->pageTable->pages[page_number].flags |= Valid;
+                //devo settare il frame ad occupato e aggiornare la page number
+                mmu->memory->frames[i].page_number = page_number;
+                mmu->memory->size++;
+                return 0; //OK
             }
-            //i = indice del frame libero
-            mmu->pageTable->pages[page_number].frame_number =  i;
-            mmu->pageTable->pages[page_number].flags |= Valid;
-            //devo settare il frame ad occupato e aggiornare la page number
-            mmu->memory->frames[i].page_number = page_number;
-            mmu->memory->size++;
-            return 0; //OK
 
-        } else if (mmu->pageTable->pages[page_number].flags & Swapped){
-    // devo scrivere una pagina che era stata "swapped out" 
-            //posizione in swap 
-            int swap_idx = page_number * SIZE_PAGE;
+            //non c'è un frame libero in memoria => swap out, swap in
+            int out_frame_num = sca(mmu, page_number); // trovo il frame vittima in memoria
+            int out_page_num = mmu->memory->frames[out_frame_num].page_number;
+            _swap_out(mmu, out_frame_num, (out_page_num * SIZE_PAGE));
+            mmu->pageTable->pages[out_page_num].flags |= Swapped;
+            mmu->pageTable->pages[out_page_num].flags &= ~Valid;
+
+            mmu->pageTable->pages[page_number].flags |= Valid;
+                
+            mmu->memory->frames[out_frame_num].page_number = page_number;
+            mmu->pageTable->pages[page_number].frame_number = out_frame_num;
+
+            return 0;
+        } 
+        else if(mmu->pageTable->pages[page_number].flags & Swapped){
+            // devo scrivere una pagina che era stata "swapped out" 
             
-        //c'è un frame libero in memoria (dubito)
+            //c'è un frame libero in memoria (dubito)
             if(mmu->memory->size < NUM_FRAMES){
                 int i = 4;
                 while( i < NUM_FRAMES ){
@@ -328,7 +353,8 @@ int MMU_exception(MMU * mmu, int page_number) {
                 _swap_in(mmu, swap_idx, i);
                 return 0;
             }
-        //non c'è un frame libero in memoria => swap out, swap in
+            
+            //non c'è un frame libero in memoria => swap out, swap in
             int out_frame_num = sca(mmu, page_number); // trovo il frame vittima in memoria
             int out_page_num = mmu->memory->frames[out_frame_num].page_number;
             _swap_out(mmu, out_frame_num, (out_page_num * SIZE_PAGE));
@@ -338,28 +364,33 @@ int MMU_exception(MMU * mmu, int page_number) {
             _swap_in(mmu, swap_idx, out_frame_num);
             mmu->pageTable->pages[page_number].flags |= Valid;
             mmu->pageTable->pages[page_number].flags &= ~Swapped;
-            
+                
             mmu->memory->frames[out_frame_num].page_number = page_number;
             mmu->pageTable->pages[page_number].frame_number = out_frame_num;
 
             return 0;
         }
-    }   
-
+    }  
+    printf("NON STO NE IN READ NE WRITE \n");
     return -1; //KO
+    
 }
 
 
 void MMU_writeByte(MMU * mmu, int pos, char c) {
+    if((pos > SIZE_VIRTUAL_MEMORY) || (pos < 0)){
+        printf("ERRORE: address out of range, Segmentation Fault'\n");
+        return;
+    }
 
     mmu->flags |= WRITE;
 
     LogicalAddress logical;
     logical.addr = pos & 0xFFFFFF; //24 bit
-
+    printf("scrivo indirizzo logico: %06x \n", logical.addr);
     PhysicalAddress * physical = getPhysicalAddr(mmu, logical);
     if(physical->addr == NULL){
-        printf("ERRORE: address fisico = NULL 'Possibile Segmentation Fault' \n");
+        printf("ERRORE: address fisico = NULL 'Segmentation Fault'\n");
         free(physical);
         return;
     }
@@ -377,14 +408,19 @@ void MMU_writeByte(MMU * mmu, int pos, char c) {
 }
 
 char * MMU_readByte(MMU * mmu, int pos){
-    
+    if((pos > SIZE_VIRTUAL_MEMORY) || (pos < 0)){
+        printf("ERRORE: address out of range, Segmentation Fault'\n");
+        return NULL;
+    }
+
     mmu->flags |= READ;
 
     LogicalAddress logical;
     logical.addr = pos & 0xFFFFFF;
+    printf("leggo indirizzo logico: %06x \n", logical.addr);
     PhysicalAddress * physical = getPhysicalAddr(mmu, logical);
     if(physical->addr == NULL){
-        printf("ERRORE: address fisico = NULL 'Possibile Segmentation Fault' \n");
+        printf("ERRORE: address fisico = NULL 'Segmentation Fault' \n");
         free(physical);
         return NULL;
     }

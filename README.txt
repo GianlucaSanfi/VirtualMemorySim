@@ -13,16 +13,18 @@ NOTA: TLB (translation lookaside buffer) non implementato
 politica di page replacement (swap): second chance algorithm  
 
 
-USO del programma: ./test {VERBOSE}|{}
-    Lanciare il programma di test con un argomento attiva 
+USO del programma: ./test [S]|[R] {VERBOSE}|{}
+    * S : pattern di accesso sequenziale
+    * R : pattern di accesso randomico 
+    * Lanciare il programma di test con l'argomento VERBOSE attiva 
         i messaggi di log durante l'esecuzione (usarlo solo
         se si vuole avere un report definito di tutti i passi
-        che svolge l'algoritmo);
+        che svolge l'algoritmo, altrimenti si satura l'output della shell);
 COMPILAZIONE: make
     Crea la libreria statica e l'eseguibile 
         (i file .o vengono eliminati)
     "make clean" per rimuovere lobreria ed eseguibile
 
-Il programma di test esegue:
-    * prima uno stress test con pattern di accesso sequenziale
-    * successivamente uno con pattern di accesso randomico
+Il programma di test può eseguire:
+    * uno stress test con pattern di accesso sequenziale
+    * uno stress test con pattern di accesso randomico
