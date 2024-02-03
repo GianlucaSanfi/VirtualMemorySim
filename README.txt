@@ -10,7 +10,7 @@ frame di dimensione:  4096 Byte
 
 OTTIMIZZAZIONI: 
     TLB (translation lookaside buffer), dimensione: MAX 10 record
-        politica di rimpiazzo LRU
+        politica di rimpiazzo: LRU
 
 politica di page replacement (swap): second chance algorithm  
 
