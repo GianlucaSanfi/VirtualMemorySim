@@ -100,11 +100,11 @@ void explicitUpdateTLB(MMU * mmu, int page_num, int frame_num){
     TLBFrame frame = {0};
     frame.frame_number = frame_num;
     frame.page_number = page_num;
-    add(mmu->tlb->tlbFrames, frame);
     
-    if(mmu->flags & VERBOSE)
+    if(mmu->flags & VERBOSE){
         printf("aggiorno il TLB in seguito ad accesso a page_table: page %x, frame %x\n", page_num, frame_num);
-    
+    }
+    add(mmu->tlb->tlbFrames, frame);
 }
 
 int checkTLB(MMU * mmu, int page_number){ 
@@ -117,7 +117,7 @@ int checkTLB(MMU * mmu, int page_number){
     while(head){
         if(head->page_number == page_number){
             int ret = head->frame_number;
-            add(mmu->tlb->tlbFrames, *head);
+            //add(mmu->tlb->tlbFrames, *head); COSA DA NON FARE (altera la consistenza dei dati)
             if(mmu->flags & VERBOSE)
                 printf(" trovato, frame corrispondente: %x\n", ret);
             return ret;
@@ -147,23 +147,30 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
     //}
     //controllo in TLB
     int cached_frame = checkTLB(mmu, page_number);
+   
     if(cached_frame != -1){
         addrFisico->addr = (cached_frame << 12 ) | offset;
+        TLBFrame frame = {0};
+        frame.page_number = page_number;
+        frame.frame_number = cached_frame;
+        add(mmu->tlb->tlbFrames, frame);
         return addrFisico;
-    }
 
-    if(!(mmu->pageTable->pages[page_number].flags & Valid)){
+    } 
+    else if(!(mmu->pageTable->pages[page_number].flags & Valid)){
         //la pagina richiesta (frame) non è valida
         //PAGE FAULT
         if(MMU_exception(mmu, page_number) != 0){
             addrFisico->addr = NULL;
             return addrFisico;
         }
+        
     }
 
     int frame_number = mmu->pageTable->pages[page_number].frame_number;
     //printf("frame number : %x \n", frame_number);
 
+   
     explicitUpdateTLB(mmu, page_number, frame_number);
 
     addrFisico->addr = (frame_number << 12 ) | offset;

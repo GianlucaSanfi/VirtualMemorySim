@@ -1,6 +1,8 @@
 #include "list.h"
 #include "globals.h"
 
+#include <stdlib.h>
+
 // max elements = NUM_TLB_FRAMES
 //inizializza a 0 la lista passata
 List * initTLB() {
@@ -36,7 +38,7 @@ void add(List * list, TLBFrame frame) {
     //controllo se è presente
     int found = 0;
     TLBFrame * head = list->head;
-
+    //printf("il frame mi torna frame_num %x e page_num %x \n", frame.frame_number, frame.page_number);
     if(list->size !=0){
         while(head){
             if(head->page_number == frame.page_number){
@@ -57,10 +59,14 @@ void add(List * list, TLBFrame frame) {
             removeFrame(list);
         }
         TLBFrame * newFrame = (TLBFrame *) malloc(sizeof(TLBFrame));
+        newFrame->page_number = frame.page_number;
+        newFrame->frame_number = frame.frame_number;
         newFrame->prev = NULL;
         newFrame->next = list->head;
         if(list->head)
             list->head->prev = newFrame;
+        if(!list->tail)
+            list->tail = newFrame;
         list->head = newFrame;
         list->size++;
 
@@ -126,6 +132,7 @@ void removeF(List * list, TLBFrame frame){
 }
 
 void removeFrame(List * list) {
+    //rimuobvo tail
     if(list->size == 0) 
         return;
     TLBFrame * victim = list->tail;
