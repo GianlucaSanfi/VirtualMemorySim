@@ -16,6 +16,9 @@ MMU * initMemSystem(){
     mmu->swap_file = fopen("swap_file.bin", "w+");
     mmu->flags = 0;
     mmu->stats = (Statistics *) malloc(sizeof(Statistics));
+    mmu->tlb = (TLB *) malloc(sizeof(TLB));
+//TLB STRUCTURE
+    mmu->tlb->tlbFrames = initTLB();
 
 //SWAP
     char c = 0;
@@ -66,6 +69,9 @@ void freeMemSystem(MMU * mmu){
     free(mmu->pageTable);
     free(mmu->stats);
 
+    freeTLB(mmu->tlb->tlbFrames);
+    free(mmu->tlb);
+
     free(mmu);
 
     printf("...chiusura del sistema completata\n");
@@ -80,9 +86,46 @@ void freeMemSystem(MMU * mmu){
 
 }
 
-int checkTLB(int page_number){ 
-    //ritorna il frame_num o -1 se non presente
-    //NON IMPLEMENTATO
+void invalidateRecordTLB(MMU * mmu, int page_num, int frame_num){
+    TLBFrame frame = {0};
+    frame.frame_number = frame_num;
+    frame.page_number = page_num;
+    removeF(mmu->tlb->tlbFrames, frame);
+    
+    if(mmu->flags & VERBOSE)
+        printf("TLB, frame_num invalido a seguito di swap_out: page %x, frame %x\n", page_num, frame_num);
+    
+}
+void explicitUpdateTLB(MMU * mmu, int page_num, int frame_num){
+    TLBFrame frame = {0};
+    frame.frame_number = frame_num;
+    frame.page_number = page_num;
+    add(mmu->tlb->tlbFrames, frame);
+    
+    if(mmu->flags & VERBOSE)
+        printf("aggiorno il TLB in seguito ad accesso a page_table: page %x, frame %x\n", page_num, frame_num);
+    
+}
+
+int checkTLB(MMU * mmu, int page_number){ 
+    //ritorna -1 se non presente, se presente ritorna il frame_num e aggiorna il tlb
+    if(mmu->flags & VERBOSE)
+        printf("controllo in TLB:");
+    
+    int size = mmu->tlb->tlbFrames->size;
+    TLBFrame * head = mmu->tlb->tlbFrames->head;
+    while(head){
+        if(head->page_number == page_number){
+            int ret = head->frame_number;
+            add(mmu->tlb->tlbFrames, *head);
+            if(mmu->flags & VERBOSE)
+                printf(" trovato, frame corrispondente: %x\n", ret);
+            return ret;
+        }
+        head = head->next;
+    }
+    if(mmu->flags & VERBOSE)
+        printf(" pagina assente\n");
     return -1;
 }
 
@@ -103,12 +146,12 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
     //    return addrFisico;
     //}
     //controllo in TLB
-    int cached_frame = checkTLB(page_number);
+    int cached_frame = checkTLB(mmu, page_number);
     if(cached_frame != -1){
-        
-        // NON IMPLEMENTATO
+        addrFisico->addr = (cached_frame << 12 ) | offset;
+        return addrFisico;
     }
-    
+
     if(!(mmu->pageTable->pages[page_number].flags & Valid)){
         //la pagina richiesta (frame) non è valida
         //PAGE FAULT
@@ -120,6 +163,9 @@ PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr){
 
     int frame_number = mmu->pageTable->pages[page_number].frame_number;
     //printf("frame number : %x \n", frame_number);
+
+    explicitUpdateTLB(mmu, page_number, frame_number);
+
     addrFisico->addr = (frame_number << 12 ) | offset;
     return addrFisico;
 }
@@ -138,6 +184,8 @@ int _swap_in(MMU * mmu, int pos_base, int frame_num){
 
 //copia il contenuto del blocco frame_num in memoria in pos_base dello swap
 int _swap_out(MMU * mmu, int frame_num, int pos_base){
+    int page_num = pos_base /(1<<12);
+    invalidateRecordTLB(mmu, page_num, frame_num);
 
     fseek(mmu->swap_file, pos_base, SEEK_SET);
     for(int i = 0; i < SIZE_PAGE; i++){

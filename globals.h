@@ -20,6 +20,6 @@
 #define NUM_FRAMES (SIZE_PHYSICAL_MEMORY / SIZE_PAGE)
 
 //totale di frame del TLB
-#define NUM_TLB_FRAMES 1
+#define NUM_TLB_FRAMES 10
 
 

@@ -2,9 +2,9 @@ CC= gcc
 CCOPTS= --std=gnu99 -g -Wall
 AR= ar
 
-OBJS= mmu.o
+OBJS= mmu.o list.o
 
-HEAD= globals.h mmu.h
+HEAD= globals.h mmu.h list.h
 
 %.o:	%.c $(HEAD)
 	$(CC) $(CCOPTS) -c -o $@  $<

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "globals.h"
-
+#include "list.h"
 
 typedef struct PhysicalAddress{
     uint32_t addr:  20;
@@ -28,7 +28,7 @@ typedef struct Frame {
 } Frame;
 
 typedef struct TLB {
-    // FUNZIONE NON IMPLEMENTATA
+    List * tlbFrames;
 } TLB;
 
 typedef struct Memory {
@@ -66,9 +66,7 @@ typedef struct MMU {
     Memory * memory;
     FILE * swap_file;
     uint8_t flags: 3;
-
-    //TLB * tlb; non implementato
-
+    TLB * tlb;
     Statistics * stats;
 } MMU;
 
@@ -85,6 +83,15 @@ int MMU_exception(MMU * mmu, int pos);
 
 //traduzione indirizzo logico -> fisico
 PhysicalAddress * getPhysicalAddr(MMU * mmu, LogicalAddress logicAddr);
+
+//controllo del TLB in address translation (prima di accedere la page_table)
+//se non trova il page_number cercato ritorna -1, 
+//  altrimenti ritorna il frame_number corrispondente e aggiorna il TLB
+int checkTLB(MMU * mmu, int page_number);
+//aggiornamento esplicito del TLB in caso di lettura della page_table
+void explicitUpdateTLB(MMU * mmu, int page_num, int frame_num);
+//invalida il record obsoleto nel TLB a seguito di swap out (se presente in TLB)
+void invalidateRecordTLB(MMU * mmu, int page_num, int frame_num);
 
 //init delle strutture di gestione memoria MMU
 MMU * initMemSystem();
