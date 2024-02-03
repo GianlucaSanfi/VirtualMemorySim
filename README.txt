@@ -8,7 +8,9 @@ indirizzi logici a 24 bit
 indirizzi fisici a 20 bit  
 frame di dimensione:  4096 Byte
 
-NOTA: TLB (translation lookaside buffer) non implementato
+OTTIMIZZAZIONI: 
+    TLB (translation lookaside buffer), dimensione: MAX 10 record
+        politica di rimpiazzo LRU
 
 politica di page replacement (swap): second chance algorithm  
 
@@ -19,7 +21,8 @@ USO del programma: ./test [S]|[R] {VERBOSE}|{}
     * Lanciare il programma di test con l'argomento VERBOSE attiva 
         i messaggi di log durante l'esecuzione (usarlo solo
         se si vuole avere un report definito di tutti i passi
-        che svolge l'algoritmo, altrimenti si satura l'output della shell);
+        che svolge l'algoritmo, altrimenti si satura l'output della 
+        shell e rende la simulazione meno leggibile);
 COMPILAZIONE: make
     Crea la libreria statica e l'eseguibile 
         (i file .o vengono eliminati)
